@@ -4,14 +4,13 @@ const config = {
     height: 600,
     physics: {
         default: 'arcade',
-        arcade: { gravity: { y: 800 } }
+        arcade: { gravity: { y: 1000 } } // Slightly higher gravity for tighter control
     },
     scene: { preload: preload, create: create, update: update }
 };
 
 const game = new Phaser.Game(config);
 
-// Global State
 let score = 0;
 let timeLeft = 120;
 let isPaused = false;
@@ -37,25 +36,26 @@ function create() {
     this.physics.add.existing(startPad, true);
     this.platforms.add(startPad);
 
-    // 3. PROCEDURAL PLATFORMS (With First-Jump Insurance)
-    for (let i = 400; i < worldWidth - 200; i += 350) {
-        let randomY;
-        
-        if (i === 400) {
-            // Force the first platform to be reachable (400-450 range)
-            randomY = Math.floor(Math.random() * (450 - 400 + 1) + 400);
-        } else {
-            // Standard random range for the rest
-            randomY = Math.floor(Math.random() * (450 - 200 + 1) + 200);
-        }
+    // 3. RELATIVE PROCEDURAL PLATFORMS
+    let lastY = 500; // Start at the same height as the startPad
+    const maxVerticalDiff = 150; // Maximum jump height difference
 
+    for (let i = 450; i < worldWidth - 200; i += 350) {
+        // Calculate a range based on the last platform's height
+        let minY = Math.max(200, lastY - maxVerticalDiff);
+        let maxY = Math.min(500, lastY + maxVerticalDiff);
+        
+        let randomY = Math.floor(Math.random() * (maxY - minY + 1) + minY);
+        
         let plat = this.add.rectangle(i, randomY, 150, 20, 0x00ff00);
         this.physics.add.existing(plat, true);
         this.platforms.add(plat);
+        
+        lastY = randomY; // Save this height for the next platform
     }
 
     // 4. THE TROPHY
-    this.trophy = this.add.rectangle(worldWidth - 100, 300, 50, 50, 0xffff00);
+    this.trophy = this.add.rectangle(worldWidth - 100, lastY - 60, 50, 50, 0xffff00);
     this.physics.add.existing(this.trophy, true);
 
     // 5. THE PLAYER
@@ -63,93 +63,72 @@ function create() {
     this.physics.add.existing(this.player);
     this.player.body.setCollideWorldBounds(true);
 
-    // 6. UI TEXT
+    // 6. UI
     scoreText = this.add.text(20, 20, 'Trophies: ' + score, { fontSize: '32px', fill: '#000' }).setScrollFactor(0);
     timerText = this.add.text(20, 60, 'Time: ' + timeLeft, { fontSize: '32px', fill: '#000' }).setScrollFactor(0);
-    
     pauseText = this.add.text(400, 300, 'PAUSED', { fontSize: '64px', fill: '#fff', backgroundColor: '#000' })
         .setOrigin(0.5).setScrollFactor(0).setVisible(false);
 
-    // 7. KEYBOARD CONTROLS (P and R)
+    // 7. CONTROLS (P & R)
     this.input.keyboard.on('keydown-P', () => {
-        if (isPaused) {
-            this.physics.resume();
-            pauseText.setVisible(false);
-            isPaused = false;
-        } else {
-            this.physics.pause();
-            pauseText.setVisible(true);
-            isPaused = true;
-        }
+        isPaused = !isPaused;
+        if (isPaused) { this.physics.pause(); pauseText.setVisible(true); }
+        else { this.physics.resume(); pauseText.setVisible(false); }
     });
 
     this.input.keyboard.on('keydown-R', () => {
-        // Full Reset
-        score = 0;
-        timeLeft = 120;
+        score = 0; timeLeft = 120;
         scoreText.setText('Trophies: ' + score);
         timerText.setText('Time: ' + timeLeft);
-        this.player.x = 100;
-        this.player.y = 400;
+        this.player.setPosition(100, 400);
         this.player.body.setVelocity(0, 0);
-        this.cameras.main.flash(300, 255, 255, 255);
-        // Note: R does not re-generate platforms without a refresh
+        this.cameras.main.flash(300);
     });
 
-    // 8. GAME TIMER ENGINE
+    // 8. TIMER
     this.time.addEvent({
         delay: 1000,
         callback: () => {
             if (!isPaused) {
                 timeLeft--;
                 timerText.setText('Time: ' + timeLeft);
-                if (timeLeft <= 0) {
-                    alert("Game Over! Total Trophies: " + score);
-                    location.reload();
-                }
+                if (timeLeft <= 0) { alert("Game Over! Score: " + score); location.reload(); }
             }
         },
-        callbackScope: this,
         loop: true
     });
 
-    // 9. COLLISIONS & FOLLOW
+    // 9. COLLISIONS
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
     this.cursors = this.input.keyboard.createCursorKeys();
     this.physics.add.collider(this.player, this.platforms);
 
-    // Lava Penalty (-5 seconds)
     this.physics.add.overlap(this.player, this.lava, () => {
-        this.player.x = 100;
-        this.player.y = 400;
+        this.player.setPosition(100, 400);
         this.player.body.setVelocity(0, 0);
         timeLeft = Math.max(0, timeLeft - 5);
         this.cameras.main.shake(200, 0.01);
-    }, null, this);
+    });
 
-    // Trophy Pickup
     this.physics.add.overlap(this.player, this.trophy, () => {
         score++;
         scoreText.setText('Trophies: ' + score);
-        this.player.x = 100;
-        this.player.y = 400;
+        this.player.setPosition(100, 400);
         this.player.body.setVelocity(0, 0);
         this.cameras.main.flash(500, 255, 255, 0);
-    }, null, this);
+    });
 }
 
 function update() {
     if (isPaused) return;
+    const speed = 300;
+    const jump = -600;
 
-    if (this.cursors.left.isDown) {
-        this.player.body.setVelocityX(-250);
-    } else if (this.cursors.right.isDown) {
-        this.player.body.setVelocityX(250);
-    } else {
-        this.player.body.setVelocityX(0);
-    }
+    if (this.cursors.left.isDown) this.player.body.setVelocityX(-speed);
+    else if (this.cursors.right.isDown) this.player.body.setVelocityX(speed);
+    else this.player.body.setVelocityX(0);
 
     if (this.cursors.up.isDown && this.player.body.touching.down) {
-        this.player.body.setVelocityY(-550);
+        this.player.body.setVelocityY(jump);
     }
 }
