@@ -1,28 +1,54 @@
 const config = {
-  width: 800, height: 600,
-  physics: {default: 'arcade', arcade: { gravity: { y: 300 } } },
-  scene: { preload: preload, create: create }
+    type: Phaser.AUTO, // Added this for safety
+    width: 800, 
+    height: 600,
+    physics: {
+        default: 'arcade', 
+        arcade: { gravity: { y: 300 } } 
+    },
+    // FIX 1: Added update to the scene list here!
+    scene: { preload: preload, create: create, update: update }
 };
+
 const game = new Phaser.Game(config);
+
 function preload() {
-    // We will put images here later
+    // Images coming soon!
 }
+
 function create() {
-    // 1. Set the sky color
     this.cameras.main.setBackgroundColor('#87CEEB');
 
-    // 2. Create the "Static" Floor (Green Rectangle)
     this.platforms = this.physics.add.staticGroup();
     let floor = this.add.rectangle(400, 580, 800, 40, 0x00ff00);
-    
-    // 3. Make the floor solid
     this.physics.add.existing(floor, true); 
     this.platforms.add(floor);
 
-    // 4. Create the player (Red Square)
     this.player = this.add.rectangle(400, 100, 50, 50, 0xff0000);
     this.physics.add.existing(this.player);
+    
+    // FIX 2: Tell Phaser to listen to the keyboard
+    this.cursors = this.input.keyboard.createCursorKeys();
 
-    // 5. THE MAGIC: This prevents falling through the floor
     this.physics.add.collider(this.player, this.platforms);
+}
+
+function update() {
+    // If the left arrow is down, move left
+    if (this.cursors.left.isDown) {
+        this.player.body.setVelocityX(-160);
+    }
+    // If the right arrow is down, move right
+    else if (this.cursors.right.isDown) {
+        this.player.body.setVelocityX(160);
+    }
+    // If nothing is pressed, stop moving
+    else {
+        this.player.body.setVelocityX(0);
+    }
+
+    // Jump if Up is pressed AND the square is on the floor
+    if (this.cursors.up.isDown && this.player.body.touching.down) {
+        this.player.body.setVelocityY(-330);
+    }
 }
