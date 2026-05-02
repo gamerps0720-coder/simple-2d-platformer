@@ -117,6 +117,20 @@ function create() {
         this.player.body.setVelocity(0, 0);
         this.cameras.main.flash(500, 255, 255, 0);
     });
+    this.input.keyboard.on('keydown-H', () => {
+    // 1. Create the text in the center of the screen
+    let greeting = this.add.text(400, 300, 'Hi Caden!', { 
+        fontSize: '64px', 
+        fill: '#ffffff',
+        backgroundColor: '#000000',
+        padding: { x: 20, y: 10 }
+    }).setOrigin(0.5).setScrollFactor(0); // setScrollFactor(0) keeps it stuck to the screen
+
+    // 2. Make it disappear after 2 seconds
+    this.time.delayedCall(2000, () => {
+        greeting.destroy();
+    });
+});
 }
 
 function update() {
@@ -132,11 +146,3 @@ function update() {
         this.player.body.setVelocityY(jump);
     }
 }
-window.addEventListener('keydown', (event) => {
-  // We check if the key pressed is 'h' (case-sensitive)
-  if (event.key === 'h' || event.key === 'H') {
-    console.log('hi Caden');
-    // If you want it to pop up on the screen instead, use:
-    // alert('hi Caden');
-  }
-});
