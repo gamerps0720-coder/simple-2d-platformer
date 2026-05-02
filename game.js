@@ -132,3 +132,11 @@ function update() {
         this.player.body.setVelocityY(jump);
     }
 }
+window.addEventListener('keydown', (event) => {
+  // We check if the key pressed is 'h' (case-sensitive)
+  if (event.key === 'h' || event.key === 'H') {
+    console.log('hi Caden');
+    // If you want it to pop up on the screen instead, use:
+    // alert('hi Caden');
+  }
+});
