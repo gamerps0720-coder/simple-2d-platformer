@@ -119,7 +119,7 @@ function create() {
     });
     this.input.keyboard.on('keydown-H', () => {
     // 1. Create the text in the center of the screen
-    let greeting = this.add.text(400, 300, 'Hi Caden!', { 
+    let greeting = this.add.text(400, 300, 'Hi Player!', { 
         fontSize: '64px', 
         fill: '#ffffff',
         backgroundColor: '#000000',
